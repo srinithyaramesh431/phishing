@@ -1,0 +1,5 @@
+{
+  "name": "PhishGuard AI",
+  "description": "An intelligent application for detecting phishing emails using AI-powered analysis. Users can upload or paste email content to receive a safety classification (Safe, Suspicious, or Phishing) with color-coded indicators. The app features a simulated user authentication flow and multi-language support.",
+  "requestFramePermissions": []
+}
