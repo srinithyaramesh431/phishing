@@ -23,10 +23,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, switchToSignup, translat
     // Mock authentication logic using localStorage
     const storedUsers = JSON.parse(localStorage.getItem('phishguard_users') || '{}');
     
-    if (storedUsers[email] && storedUsers[email] === password) {
+    // Check if user exists
+    if (!storedUsers[email]) {
+        alert("Account not found. Redirecting to Sign Up page.");
+        switchToSignup();
+        return;
+    }
+
+    // Check password
+    if (storedUsers[email] === password) {
         onLogin();
     } else {
-        alert("Invalid email or password. Please try again or create an account.");
+        alert("Invalid password. Please try again.");
     }
   };
 

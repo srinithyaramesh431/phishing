@@ -1,12 +1,25 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Classification } from '../types';
 
-if (!process.env.API_KEY) {
-  console.warn("API_KEY environment variable not set. Using a placeholder. The app will not function correctly without a valid API key.");
-}
+// Helper to safely access environment variables in various environments (Vite, Next.js, etc.)
+const getApiKey = (): string | undefined => {
+  // Check for Vite environment variable (standard for this project structure)
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
+    // @ts-ignore
+    return import.meta.env.VITE_API_KEY;
+  }
+  // Check for standard process.env (if polyfilled or Node.js)
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+  return undefined;
+};
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "YOUR_API_KEY_HERE" });
+const apiKey = getApiKey();
+
+// Initialize AI instance only if key is present to avoid immediate crash
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
 const analysisSchema = {
   type: Type.OBJECT,
@@ -24,9 +37,21 @@ const analysisSchema = {
   required: ['classification', 'reason']
 };
 
-export const analyzeEmailContent = async (content: string): Promise<{ classification: Classification; reason: string } | null> => {
-  if (!content || content.trim().length < 50) {
-    // Basic validation to avoid sending empty or tiny prompts
+export const analyzeEmailContent = async (content: string): Promise<{ classification: Classification; reason: string }> => {
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please set VITE_API_KEY in your environment variables.");
+  }
+
+  // Check if the user mistakenly provided an OpenAI key
+  if (apiKey.startsWith('sk-')) {
+    throw new Error("Incorrect API Key detected. It looks like you are using an OpenAI key (starting with 'sk-'), but this application requires a Google Gemini API Key.");
+  }
+
+  if (!ai) {
+     throw new Error("Gemini AI client failed to initialize.");
+  }
+
+  if (!content || content.trim().length < 10) {
     throw new Error("Content is too short to analyze.");
   }
   
@@ -59,10 +84,13 @@ export const analyzeEmailContent = async (content: string): Promise<{ classifica
       };
     } else {
       console.error("Invalid response structure from API:", result);
-      return null;
+      throw new Error("Received invalid response format from AI.");
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error calling Gemini API:", error);
-    return null;
+    if (error.message && (error.message.includes('403') || error.message.includes('key'))) {
+        throw new Error("API Permission Denied. Check your API Key.");
+    }
+    throw new Error(error.message || "Failed to analyze email. Please try again.");
   }
 };

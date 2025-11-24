@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { analyzeEmailContent } from '../services/geminiService';
 import { Classification } from '../types';
@@ -61,9 +60,9 @@ const PhishDetector: React.FC<PhishDetectorProps> = ({ onLogout, language, setLa
     setError(null);
     setCurrentResult(null);
 
-    const result = await analyzeEmailContent(emailContent);
+    try {
+      const result = await analyzeEmailContent(emailContent);
 
-    if (result) {
       const newResult: AnalysisResult = {
         id: new Date().toISOString(),
         content: emailContent.substring(0, 200) + '...', // Store a snippet
@@ -73,10 +72,12 @@ const PhishDetector: React.FC<PhishDetectorProps> = ({ onLogout, language, setLa
       };
       setCurrentResult(newResult);
       setHistory(prev => [newResult, ...prev]);
-    } else {
-      setError(translations.errorDescription);
+    } catch (err: any) {
+      // Display the specific error message
+      setError(err.message || translations.errorDescription);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
   
   const getResultBgColor = (classification: Classification | undefined) => {
